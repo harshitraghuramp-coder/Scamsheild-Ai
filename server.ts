@@ -7,20 +7,31 @@ import {
   AnalyzeUrlSchema,
   AnalyzeScreenshotSchema,
   AnalyzePhoneCallSchema,
+  AnalyzeAppSchema,
   ThreatIntelQuerySchema,
+  ScamTrackerFeedQuerySchema,
   AnalysisResult,
+  AppAuthenticityResult,
   DISCLAIMER_TEXT,
   RiskLevel,
   ScamType,
   ScanTimings,
-} from './server/types.js';
-import { analyzeMessageDeterministic } from './server/heuristics/message-checker.js';
-import { analyzeUrlDeterministic } from './server/heuristics/url-checker.js';
-import { analyzePhoneCallDeterministic } from './server/heuristics/phone-call-checker.js';
-import { threatIntelService } from './server/threat-intel/feed.js';
-import { geminiAnalyzerProvider } from './server/ai/gemini-provider.js';
-import { scanCache } from './server/cache/scan-cache.js';
-import { aiCircuitBreaker } from './server/ai/circuit-breaker.js';
+} from './server/types.ts';
+import { analyzeMessageDeterministic } from './server/heuristics/message-checker.ts';
+import { analyzeUrlDeterministic } from './server/heuristics/url-checker.ts';
+import { analyzePhoneCallDeterministic } from './server/heuristics/phone-call-checker.ts';
+import {
+  parseAndValidateAppInput,
+  retrieveAppMetadata,
+  analyzeAppDeterministic,
+} from './server/heuristics/app-checker.ts';
+import { threatIntelService } from './server/threat-intel/feed.ts';
+import { liveScamTrackerService } from './server/threat-intel/live-scam-tracker.ts';
+import { geminiAnalyzerProvider } from './server/ai/gemini-provider.ts';
+import { scanCache } from './server/cache/scan-cache.ts';
+import { aiCircuitBreaker } from './server/ai/circuit-breaker.ts';
+import cookieParser from 'cookie-parser';
+import authRouter from './server/auth/routes.ts';
 
 dotenv.config();
 
@@ -30,9 +41,13 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
-// Middleware for parsing JSON requests with 15MB limit for screenshots
+// Middleware for parsing JSON requests with 15MB limit for screenshots and cookies
 app.use(express.json({ limit: '15mb' }));
 app.use(express.urlencoded({ extended: true, limit: '15mb' }));
+app.use(cookieParser());
+
+// Mount ScamShield Secure Identity Authentication Router
+app.use('/api/auth', authRouter);
 
 // Helper to generate unique scan IDs
 function generateScanId(): string {
@@ -530,6 +545,175 @@ app.post('/api/analyze/phone-call', async (req: Request, res: Response): Promise
   }
 });
 
+// Route: Analyze Mobile App Authenticity & Store Forensics
+app.post('/api/analyze/app', async (req: Request, res: Response): Promise<void> => {
+  const t0 = performance.now();
+  try {
+    const parseResult = AnalyzeAppSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      res.status(400).json({ error: parseResult.error.issues[0]?.message || 'Invalid app analysis payload' });
+      return;
+    }
+
+    const { urlOrPackageId, storeHint, bypassCache } = parseResult.data;
+
+    // Validate and parse target safely (SSRF safe)
+    let target;
+    try {
+      target = parseAndValidateAppInput(urlOrPackageId, storeHint);
+    } catch (valErr: any) {
+      res.status(400).json({ error: valErr.message || 'Invalid store URL or package identifier' });
+      return;
+    }
+
+    // Cache key
+    const cacheKey = scanCache.generateKey('app', target.packageOrId, target.store);
+
+    if (!bypassCache) {
+      const cached = scanCache.get(cacheKey);
+      if (cached) {
+        const t_total_ms = Math.round((performance.now() - t0) * 10) / 10;
+        const timing: ScanTimings = {
+          t_preprocess_ms: 0,
+          t_cache_ms: t_total_ms,
+          t_ai_ms: 0,
+          t_parse_ms: 0,
+          t_total_ms,
+          cache_status: 'HIT',
+          circuit_state: aiCircuitBreaker.getState(),
+        };
+        cached.timing = timing;
+        res.setHeader('Server-Timing', `cache;dur=${t_total_ms};desc="Cache Hit", total;dur=${t_total_ms}`);
+        res.json(cached);
+        return;
+      }
+    }
+
+    // Singleflight coalescing
+    const { result } = await scanCache.coalesce(cacheKey, async () => {
+      const t_prep_start = performance.now();
+
+      // Retrieve store metadata (Apple lookup API / Google Play HTML / benchmark fallback)
+      const appMetadata = await retrieveAppMetadata(target);
+
+      // Deterministic heuristics
+      const deterministic = analyzeAppDeterministic(appMetadata);
+      const t_preprocess_ms = Math.round((performance.now() - t_prep_start) * 10) / 10;
+
+      // Gemini AI enhancement
+      let aiResult: (Partial<AnalysisResult> & { aiForensicFindings?: string[] }) | null = null;
+      let mode: 'ai_enhanced' | 'heuristic_fallback' = 'heuristic_fallback';
+      let t_ai_ms = 0;
+
+      if (process.env.GEMINI_API_KEY && aiCircuitBreaker.getState() !== 'OPEN') {
+        const t_ai_start = performance.now();
+        try {
+          aiResult = await geminiAnalyzerProvider.analyzeApp({
+            appMetadata,
+            deterministicData: deterministic,
+          });
+          mode = 'ai_enhanced';
+        } catch (aiErr: any) {
+          console.warn(`[AI App Provider Fallback] Reason: ${aiErr.message || 'Error/Timeout'}. Fast deterministic engine engaged.`);
+        } finally {
+          t_ai_ms = Math.round((performance.now() - t_ai_start) * 10) / 10;
+        }
+      }
+
+      // Merge results
+      const t_parse_start = performance.now();
+      let finalRiskScore = deterministic.riskScore;
+      let finalRiskLevel: RiskLevel = deterministic.riskLevel;
+      let finalScamType: ScamType = deterministic.scamType;
+      let finalSummary = deterministic.summary;
+      let finalRedFlags = [...deterministic.redFlags];
+      let finalTactics = [...deterministic.psychologicalTactics];
+      let finalActions = [...deterministic.recommendedActions];
+      let confidence = deterministic.confidence;
+      let forensicFindings = [...deterministic.aiForensicFindings];
+
+      if (aiResult) {
+        finalRiskScore = Math.max(deterministic.riskScore, aiResult.riskScore ?? 0);
+        if (finalRiskScore >= 75) finalRiskLevel = 'CRITICAL';
+        else if (finalRiskScore >= 50) finalRiskLevel = 'HIGH';
+        else if (finalRiskScore >= 25) finalRiskLevel = 'MEDIUM';
+        else finalRiskLevel = 'LOW';
+
+        if (aiResult.scamType && aiResult.scamType !== 'Unclassified') {
+          finalScamType = aiResult.scamType;
+        }
+        if (aiResult.summary) finalSummary = aiResult.summary;
+        if (aiResult.confidence) confidence = aiResult.confidence;
+
+        if (aiResult.redFlags) {
+          for (const flag of aiResult.redFlags) {
+            if (!finalRedFlags.some((f) => f.title.toLowerCase() === flag.title.toLowerCase())) {
+              finalRedFlags.push(flag);
+            }
+          }
+        }
+        if (aiResult.psychologicalTactics) {
+          finalTactics = Array.from(new Set([...finalTactics, ...aiResult.psychologicalTactics]));
+        }
+        if (aiResult.recommendedActions && aiResult.recommendedActions.length > 0) {
+          finalActions = aiResult.recommendedActions;
+        }
+        if (aiResult.aiForensicFindings) {
+          forensicFindings = Array.from(new Set([...forensicFindings, ...aiResult.aiForensicFindings]));
+        }
+      }
+
+      const t_parse_ms = Math.round((performance.now() - t_parse_start) * 10) / 10;
+      const t_total_ms = Math.round((performance.now() - t0) * 10) / 10;
+
+      const timing: ScanTimings = {
+        t_preprocess_ms,
+        t_cache_ms: 0,
+        t_ai_ms,
+        t_parse_ms,
+        t_total_ms,
+        cache_status: 'MISS',
+        circuit_state: aiCircuitBreaker.getState(),
+      };
+
+      const finalAppResult: AppAuthenticityResult = {
+        ...deterministic,
+        id: generateScanId(),
+        timestamp: new Date().toISOString(),
+        targetType: 'app',
+        scamType: finalScamType,
+        riskScore: finalRiskScore,
+        riskLevel: finalRiskLevel,
+        confidence,
+        summary: finalSummary,
+        redFlags: finalRedFlags,
+        psychologicalTactics: finalTactics,
+        recommendedActions: finalActions,
+        aiForensicFindings: forensicFindings,
+        sourceAnalysisMode: mode,
+        disclaimer: DISCLAIMER_TEXT,
+        timing,
+      };
+
+      // Store in bounded cache
+      scanCache.set(cacheKey, finalAppResult);
+
+      return finalAppResult;
+    });
+
+    const totalDur = Math.round((performance.now() - t0) * 10) / 10;
+    res.setHeader(
+      'Server-Timing',
+      `preprocess;dur=${result.timing?.t_preprocess_ms || 0}, ai;dur=${result.timing?.t_ai_ms || 0}, total;dur=${totalDur}`
+    );
+
+    res.json(result);
+  } catch (error: any) {
+    console.error('Error analyzing mobile app:', error);
+    res.status(500).json({ error: error.message || 'Internal server error while analyzing mobile app' });
+  }
+});
+
 // Route: Threat Intelligence Feed Status
 app.get('/api/threat-intel/status', (_req: Request, res: Response): void => {
   res.json(threatIntelService.getStatus());
@@ -565,6 +749,114 @@ app.post('/api/cache/clear', (_req: Request, res: Response): void => {
   res.json({ success: true, message: 'Scan cache cleared and circuit breaker reset' });
 });
 
+// ==========================================
+// LIVE SCAM TRACKER API ENDPOINTS
+// ==========================================
+
+// Route: Get Scam Tracker Summary Statistics & Category Breakdown
+app.get('/api/scam-tracker/stats', (_req: Request, res: Response): void => {
+  try {
+    const stats = liveScamTrackerService.getStats();
+    const categories = liveScamTrackerService.getCategoryStatistics();
+    res.json({
+      success: true,
+      stats,
+      categories,
+    });
+  } catch (err: any) {
+    console.error('Error fetching scam tracker stats:', err);
+    res.status(500).json({ success: false, error: 'Failed to retrieve live scam tracker metrics' });
+  }
+});
+
+// Route: Get Filtered Live Scam Feed Items
+app.get('/api/scam-tracker/feed', (req: Request, res: Response): void => {
+  try {
+    const parsedQuery = ScamTrackerFeedQuerySchema.safeParse(req.query);
+    if (!parsedQuery.success) {
+      res.status(400).json({
+        success: false,
+        error: parsedQuery.error.issues[0]?.message || 'Invalid feed query parameters',
+      });
+      return;
+    }
+
+    const { items, totalCount, hasMore } = liveScamTrackerService.getFilteredFeed(parsedQuery.data);
+    res.json({
+      success: true,
+      items,
+      totalCount,
+      hasMore,
+      query: parsedQuery.data,
+    });
+  } catch (err: any) {
+    console.error('Error querying scam tracker feed:', err);
+    res.status(500).json({ success: false, error: 'Failed to retrieve scam tracker feed' });
+  }
+});
+
+// Route: Get Geographic Intelligence & State-wise Scam Data
+app.get('/api/scam-tracker/regions', (_req: Request, res: Response): void => {
+  try {
+    const regions = liveScamTrackerService.getRegionalThreatData();
+    res.json({
+      success: true,
+      regions,
+      sourceNotice: 'Locations reflect official state cyber crime division releases and verified advisory reports. ScamShield AI never infers victim location from IP addresses.',
+    });
+  } catch (err: any) {
+    console.error('Error fetching regional threat data:', err);
+    res.status(500).json({ success: false, error: 'Failed to retrieve regional threat intelligence' });
+  }
+});
+
+// Route: Trigger Live Feed Refresh
+app.post('/api/scam-tracker/refresh', (_req: Request, res: Response): void => {
+  try {
+    const updatedStats = liveScamTrackerService.refresh();
+    const categories = liveScamTrackerService.getCategoryStatistics();
+    res.json({
+      success: true,
+      message: 'Live scam intelligence feeds synchronized successfully',
+      stats: updatedStats,
+      categories,
+    });
+  } catch (err: any) {
+    console.error('Error refreshing scam tracker feeds:', err);
+    res.status(500).json({ success: false, error: 'Failed to refresh scam intelligence feeds' });
+  }
+});
+
+// Route: Ingest Community Report (marked UNVERIFIED_SUBMISSION)
+app.post('/api/scam-tracker/report', (req: Request, res: Response): void => {
+  try {
+    const { title, category, description, indicators, affectedRegion } = req.body || {};
+    if (!title || !category || !description) {
+      res.status(400).json({ success: false, error: 'Title, category, and description are required' });
+      return;
+    }
+
+    const ingested = liveScamTrackerService.ingestReport({
+      title: String(title).slice(0, 150),
+      category,
+      description: String(description).slice(0, 1000),
+      indicators: Array.isArray(indicators) ? indicators.map(String).slice(0, 5) : [],
+      affectedRegion: affectedRegion ? String(affectedRegion).slice(0, 60) : 'Pan-India',
+      verificationStatus: 'UNVERIFIED_SUBMISSION',
+      riskLevel: 'MEDIUM',
+    });
+
+    res.json({
+      success: true,
+      message: 'Community scam report recorded under moderation review.',
+      reportId: ingested.id,
+    });
+  } catch (err: any) {
+    console.error('Error ingesting scam report:', err);
+    res.status(500).json({ success: false, error: 'Failed to record community report' });
+  }
+});
+
 // Vite Dev vs Production Handling
 async function startServer() {
   const isProduction = process.env.NODE_ENV === 'production';
@@ -573,7 +865,10 @@ async function startServer() {
     // In dev, use Vite's connect instance as middleware
     const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: {
+        middlewareMode: true,
+        hmr: false,
+      },
       appType: 'spa',
     });
     app.use(vite.middlewares);

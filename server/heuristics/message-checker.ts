@@ -1,5 +1,5 @@
-import { RedFlag, TechnicalIndicator, RecommendedAction, RiskLevel, ScamType, ExtractedEntities } from '../types.js';
-import { analyzeUrlDeterministic } from './url-checker.js';
+import { RedFlag, TechnicalIndicator, RecommendedAction, RiskLevel, ScamType, ExtractedEntities } from '../types.ts';
+import { analyzeUrlDeterministic } from './url-checker.ts';
 
 interface ScamPattern {
   id: string;

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { AnalysisResult } from '../types';
 import { RiskGauge } from './RiskGauge';
+import { AppAuthenticityReport } from './AppAuthenticityReport';
 import {
   AlertOctagon,
   Brain,
@@ -76,6 +77,19 @@ ${result.disclaimer}`;
         return 'bg-slate-800 text-slate-400 border-slate-700';
     }
   };
+
+  if (result.targetType === 'app') {
+    const appResult = (result.appDetails || result) as any;
+    if (appResult && appResult.appMetadata) {
+      return (
+        <AppAuthenticityReport
+          result={appResult}
+          onReset={onReset}
+          showReset={showReset}
+        />
+      );
+    }
+  }
 
   return (
     <div className="w-full space-y-6 animate-in fade-in slide-in-from-bottom-3 duration-300">
@@ -163,6 +177,49 @@ ${result.disclaimer}`;
         confidence={result.confidence}
         mode={result.sourceAnalysisMode}
       />
+
+      {/* Emergency Distress & Helpline Assistance for High/Critical Risk */}
+      {(result.riskLevel === 'CRITICAL' || result.riskLevel === 'HIGH') && (
+        <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-rose-950/70 via-[#130E20] to-[#0A1024] border border-rose-500/40 shadow-xl space-y-3">
+          <div className="flex items-start gap-3">
+            <div className="w-9 h-9 rounded-xl bg-rose-500/20 border border-rose-500/40 flex items-center justify-center shrink-0 text-rose-300">
+              <Phone className="w-4 h-4 animate-pulse" />
+            </div>
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold uppercase tracking-wider text-rose-300 font-mono">
+                  Immediate Emergency Assistance
+                </span>
+                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-500/25 text-rose-200 border border-rose-500/40">
+                  Dial 1930
+                </span>
+              </div>
+              <p className="text-xs text-slate-200 leading-relaxed">
+                If someone is threatening your arrest, demanding extortion money, or you transferred funds, <strong>stay calm and do not send money</strong>. Official police never arrest via video call.
+              </p>
+            </div>
+          </div>
+
+          <div className="pt-1 flex flex-wrap items-center gap-2.5">
+            <a
+              href="tel:1930"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs shadow-md transition"
+            >
+              <Phone className="w-3.5 h-3.5" />
+              <span>Call 1930 Helpline</span>
+            </a>
+            <a
+              href="https://cybercrime.gov.in"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold transition"
+            >
+              <ExternalLink className="w-3.5 h-3.5 text-cyan-400" />
+              <span>cybercrime.gov.in</span>
+            </a>
+          </div>
+        </div>
+      )}
 
       {/* Forensic Summary */}
       <div className="p-5 rounded-2xl bg-[#0B132B]/60 border border-slate-800 backdrop-blur-sm">

@@ -1,7 +1,7 @@
 import { GoogleGenAI, Type, ThinkingLevel } from '@google/genai';
-import { IAIAnalyzerProvider, MessageAnalysisInput, MultimodalAnalysisInput, UrlAnalysisInput } from './provider.js';
-import { AnalysisResult, RiskLevel, ScamType, DISCLAIMER_TEXT } from '../types.js';
-import { aiCircuitBreaker } from './circuit-breaker.js';
+import { IAIAnalyzerProvider, MessageAnalysisInput, MultimodalAnalysisInput, UrlAnalysisInput, AppAnalysisInput } from './provider.ts';
+import { AnalysisResult, RiskLevel, ScamType, DISCLAIMER_TEXT } from '../types.ts';
+import { aiCircuitBreaker } from './circuit-breaker.ts';
 
 export class GeminiAnalyzerProvider implements IAIAnalyzerProvider {
   public name = 'Google Gemini (gemini-3.8-flash)';
@@ -414,6 +414,113 @@ ${input.transcript.slice(0, 4000)}
         redFlags: parsed.redFlags,
         psychologicalTactics: parsed.psychologicalTactics,
         recommendedActions: parsed.recommendedActions,
+        sourceAnalysisMode: 'ai_enhanced',
+        disclaimer: DISCLAIMER_TEXT,
+      };
+    });
+  }
+
+  public async analyzeApp(input: AppAnalysisInput): Promise<Partial<AnalysisResult> & { aiForensicFindings?: string[] }> {
+    if (!this.isConfigured() || !this.ai) {
+      throw new Error('Gemini API is not configured on the server.');
+    }
+
+    return aiCircuitBreaker.execute(async (signal) => {
+      const systemPrompt = `You are ScamShield AI, specialized in Mobile Threat Forensics and App Authenticity Verification.
+Investigate potentially fake, fraudulent, impersonating, or malicious mobile applications before users install them.
+Rules:
+1. Distinguish verified facts (store-provided) from probabilistic forensic inferences.
+2. Evaluate potential trademark or brand impersonation (e.g. popular banks, messengers, crypto wallets).
+3. Assess excessive sensitive permissions (Accessibility service hijack, SMS read/receive, overlay windows, contact scraping).
+4. Do NOT classify an app as fake purely because it is new or has few reviews.
+5. Provide actionable, prioritized user recommendations.
+6. Return concise JSON matching the exact schema.`;
+
+      const userPrompt = `App Metadata:
+${JSON.stringify(input.appMetadata, null, 2)}
+
+Deterministic Heuristic Findings:
+${JSON.stringify(input.deterministicData, null, 2)}`;
+
+      const response = await this.ai!.models.generateContent({
+        model: 'gemini-3.8-flash',
+        contents: userPrompt,
+        config: {
+          systemInstruction: systemPrompt,
+          responseMimeType: 'application/json',
+          thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              scamType: { type: Type.STRING },
+              riskScore: { type: Type.INTEGER },
+              riskLevel: { type: Type.STRING, enum: ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'] },
+              confidence: { type: Type.STRING, enum: ['Low', 'Medium', 'High'] },
+              summary: { type: Type.STRING },
+              aiForensicFindings: {
+                type: Type.ARRAY,
+                items: { type: Type.STRING },
+              },
+              redFlags: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    title: { type: Type.STRING },
+                    description: { type: Type.STRING },
+                    severity: { type: Type.STRING, enum: ['low', 'medium', 'high', 'critical'] },
+                  },
+                  required: ['title', 'description', 'severity'],
+                },
+              },
+              psychologicalTactics: {
+                type: Type.ARRAY,
+                items: { type: Type.STRING },
+              },
+              recommendedActions: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    step: { type: Type.INTEGER },
+                    action: { type: Type.STRING },
+                    priority: { type: Type.STRING, enum: ['immediate', 'recommended', 'optional'] },
+                  },
+                  required: ['step', 'action', 'priority'],
+                },
+              },
+            },
+            required: [
+              'scamType',
+              'riskScore',
+              'riskLevel',
+              'confidence',
+              'summary',
+              'aiForensicFindings',
+              'redFlags',
+              'psychologicalTactics',
+              'recommendedActions',
+            ],
+          },
+        },
+      });
+
+      const text = response.text;
+      if (!text) {
+        throw new Error('Empty response from AI model');
+      }
+
+      const parsed = JSON.parse(text);
+      return {
+        scamType: parsed.scamType as ScamType,
+        riskScore: Math.min(100, Math.max(0, parsed.riskScore)),
+        riskLevel: parsed.riskLevel as RiskLevel,
+        confidence: parsed.confidence,
+        summary: parsed.summary,
+        redFlags: parsed.redFlags,
+        psychologicalTactics: parsed.psychologicalTactics,
+        recommendedActions: parsed.recommendedActions,
+        aiForensicFindings: parsed.aiForensicFindings,
         sourceAnalysisMode: 'ai_enhanced',
         disclaimer: DISCLAIMER_TEXT,
       };

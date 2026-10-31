@@ -13,6 +13,8 @@ export type ScamType =
   | 'Phone Call & Voice Vishing'
   | 'Police & Legal Threat Impersonation'
   | 'Fake Bank Support Call'
+  | 'Fake Mobile App & Impersonation'
+  | 'Malicious App & Spyware'
   | 'Low Threat / Informational'
   | 'Unclassified';
 
@@ -52,10 +54,94 @@ export interface ScanTimings {
   circuit_state?: string;
 }
 
+export interface SensitivePermission {
+  permission: string;
+  riskLevel: 'critical' | 'high' | 'medium';
+  rationale: string;
+}
+
+export interface UserReviewPattern {
+  topic: string;
+  sentiment: 'positive' | 'concerning' | 'suspicious' | 'neutral';
+  detail: string;
+}
+
+export interface AppStoreMetadata {
+  store: 'google_play' | 'apple_app_store';
+  storeListingStatus: 'STORE_VERIFIED_LISTING' | 'UNLISTED_OR_REMOVED' | 'UNVERIFIED_SOURCE';
+  appName: string;
+  appIconUrl?: string;
+  packageNameOrId: string;
+  category: string;
+  currentVersion: string;
+  appSize?: string;
+  appDescription: string;
+
+  // Developer Information
+  developerName: string;
+  developerWebsite?: string;
+  developerEmail?: string;
+  developerAddress?: string;
+  developerCountry?: string; // "Not publicly verified" if unknown
+  parentCompany?: string; // "Not publicly verified" if unknown
+  developerOtherApps?: string[];
+
+  // Publication Information
+  originalReleaseDate?: string; // e.g. "2015-08-12" or "Not publicly verified"
+  lastUpdatedDate?: string; // e.g. "2024-09-10"
+  currentVersionReleaseDate?: string;
+
+  // Trust and Reputation
+  averageRating?: number; // e.g. 4.7
+  reviewCount?: number; // e.g. 152000
+  downloadRange?: string; // e.g. "100M+ downloads"
+  privacyPolicyUrl?: string;
+
+  // Permissions & Review indicators
+  declaredPermissions: string[];
+  sensitivePermissions: SensitivePermission[];
+  userReviewPatterns: UserReviewPattern[];
+}
+
+export interface AppAuthenticityCheck {
+  id: string;
+  name: string;
+  category: 'impersonation' | 'developer_identity' | 'permissions' | 'reputation' | 'threat_intel';
+  status: 'PASSED' | 'WARNING' | 'FAILED' | 'UNVERIFIED';
+  details: string;
+  evidence: string;
+}
+
+export interface DeveloperVerification {
+  identityStatus: 'VERIFIED_OFFICIAL' | 'PARTIALLY_VERIFIED' | 'SUSPICIOUS_IDENTITY' | 'UNVERIFIED';
+  summary: string;
+  domainMatch: boolean;
+  freeEmailWarning: boolean;
+  companyRegistrationCheck: string;
+}
+
+export interface PermissionRiskSummary {
+  totalRequested: number;
+  sensitiveCount: number;
+  excessiveRiskDetected: boolean;
+  criticalFindings: string[];
+}
+
+export interface AppAuthenticityResult extends AnalysisResult {
+  appMetadata: AppStoreMetadata;
+  authenticityChecks: AppAuthenticityCheck[];
+  developerVerification: DeveloperVerification;
+  permissionRiskSummary: PermissionRiskSummary;
+  verifiableFacts: string[];
+  storeProvidedDetails: string[];
+  aiForensicFindings: string[];
+  unverifiedInformation: string[];
+}
+
 export interface AnalysisResult {
   id: string;
   timestamp: string;
-  targetType: 'message' | 'url' | 'screenshot' | 'phone_call';
+  targetType: 'message' | 'url' | 'screenshot' | 'phone_call' | 'app';
   scamType: ScamType;
   riskScore: number;
   riskLevel: RiskLevel;
@@ -71,6 +157,7 @@ export interface AnalysisResult {
   originalInputPreview?: string;
   timing?: ScanTimings;
   callerIdOrNumber?: string;
+  appDetails?: AppAuthenticityResult;
 }
 
 export interface ScanHistoryItem extends AnalysisResult {
@@ -122,3 +209,93 @@ export interface EncyclopediaEntry {
   attackerTactics: string[];
   countermeasures: string[];
 }
+
+// Live Scam Tracker Domain Types
+export type LiveScamCategory =
+  | 'Digital Arrest Scams'
+  | 'UPI Payment Scams'
+  | 'Fake Bank Calls'
+  | 'OTP Theft'
+  | 'Fake Job and Internship Offers'
+  | 'Investment and Trading Scams'
+  | 'Phishing Websites'
+  | 'Fake Shopping Applications'
+  | 'Loan App Scams'
+  | 'Social Media Impersonation'
+  | 'Cryptocurrency Scams'
+  | 'Tech Support Scams';
+
+export type ScamVerificationStatus =
+  | 'VERIFIED_ALERT'
+  | 'UNVERIFIED_SUBMISSION'
+  | 'RESOLVED_EXPIRED';
+
+export interface ScamAlertItem {
+  id: string;
+  campaignKey: string;
+  title: string;
+  category: LiveScamCategory;
+  description: string;
+  riskLevel: RiskLevel;
+  verificationStatus: ScamVerificationStatus;
+  source: string;
+  sourceType: 'GOVERNMENT_ADVISORY' | 'CERT_IN' | 'POLICE_CYBER_CELL' | 'FINANCIAL_REGULATOR' | 'COMMUNITY_MODERATED';
+  sourceUrl?: string;
+  firstReportedDate: string;
+  lastReportedDate: string;
+  affectedRegion: string;
+  regionCode: string;
+  reportCount: number;
+  indicators: string[];
+  telltaleSigns: string[];
+  actionGuidance: string;
+  isExpired: boolean;
+  isResolved: boolean;
+  resolvedDate?: string;
+  resolutionNotes?: string;
+}
+
+export interface TrendingCategoryInfo {
+  category: LiveScamCategory;
+  activeCampaigns: number;
+  reportCount: number;
+  trend: 'surging' | 'rising' | 'stable' | 'declining';
+  changePercent: number;
+}
+
+export interface ScamTrackerStats {
+  activeAlerts: number;
+  newlyReportedScams: number;
+  trendingCategories: TrendingCategoryInfo[];
+  reportsReceivedToday: number;
+  highRiskAlerts: number;
+  recentlyResolvedAlerts: number;
+  totalCorrelatedReports: number;
+  uniqueCampaignsCount: number;
+  lastUpdated: string;
+  dataSourceStatus: 'LIVE_ADVISORY_CONNECTED' | 'DEMO_DATA_FALLBACK';
+  activeFeedSources: string[];
+}
+
+export interface CategoryStat {
+  category: LiveScamCategory;
+  activeCampaigns: number;
+  totalReports: number;
+  highRiskCount: number;
+  trend: 'surging' | 'rising' | 'stable' | 'declining';
+  weeklyChange: number;
+}
+
+export interface RegionalThreatData {
+  regionCode: string;
+  regionName: string;
+  reportCount: number;
+  activeCampaigns: number;
+  topCategory: LiveScamCategory;
+  riskLevel: RiskLevel;
+  cyberHelpline: string;
+  officialAdvisorySource: string;
+  lastIncidentDate: string;
+  statusSummary: string;
+}
+

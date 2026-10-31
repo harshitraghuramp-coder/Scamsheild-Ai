@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import { AnalysisResult } from '../types.js';
+import { AnalysisResult } from '../types.ts';
 
 export interface CacheEntry {
   keyHash: string;

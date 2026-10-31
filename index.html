@@ -3,6 +3,26 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      // Suppress benign Vite HMR WebSocket disconnection errors when HMR is intentionally disabled
+      window.addEventListener('error', function (event) {
+        if (
+          event &&
+          ((event.message && (event.message.includes('WebSocket') || event.message.includes('ws://') || event.message.includes('wss://'))) ||
+           (event.filename && event.filename.includes('@vite/client')))
+        ) {
+          event.stopImmediatePropagation();
+          event.preventDefault();
+          return true;
+        }
+      }, true);
+      window.addEventListener('unhandledrejection', function (event) {
+        if (event && event.reason && String(event.reason).includes('WebSocket')) {
+          event.stopImmediatePropagation();
+          event.preventDefault();
+        }
+      }, true);
+    </script>
     <title>ScamShield AI</title>
     <meta name="description" content="AI-powered cybersecurity scanner and fraud prevention platform: Think Before You Click." />
     <meta property="og:title" content="ScamShield AI" />

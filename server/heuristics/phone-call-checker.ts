@@ -1,5 +1,5 @@
-import { RedFlag, TechnicalIndicator, RecommendedAction, RiskLevel, ScamType, ExtractedEntities } from '../types.js';
-import { extractEntities } from './message-checker.js';
+import { RedFlag, TechnicalIndicator, RecommendedAction, RiskLevel, ScamType, ExtractedEntities } from '../types.ts';
+import { extractEntities } from './message-checker.ts';
 
 interface CallPattern {
   id: string;

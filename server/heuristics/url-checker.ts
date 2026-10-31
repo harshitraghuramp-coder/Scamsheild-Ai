@@ -1,5 +1,5 @@
-import { TechnicalIndicator, RedFlag, RecommendedAction, RiskLevel, ScamType, AnalysisResult, DISCLAIMER_TEXT } from '../types.js';
-import { threatIntelService } from '../threat-intel/feed.js';
+import { TechnicalIndicator, RedFlag, RecommendedAction, RiskLevel, ScamType, AnalysisResult, DISCLAIMER_TEXT } from '../types.ts';
+import { threatIntelService } from '../threat-intel/feed.ts';
 
 // Legitimate official domains for popular impersonated brands
 const KNOWN_LEGIT_DOMAINS: Record<string, string[]> = {

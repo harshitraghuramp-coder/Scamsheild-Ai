@@ -81,6 +81,19 @@ bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh`,
 
 Anyway, it's fate that we connected. I am Jessica from Singapore, managing an algorithmic crypto arbitrage fund in New York. We're earning guaranteed 18% weekly returns on gold-backed tokens through a private liquidity pool. Let's chat on WhatsApp!`,
   },
+  {
+    title: 'Digital Arrest Police Threat (DEMO DATA)',
+    badge: 'Digital Arrest',
+    category: 'police_impersonation',
+    text: `CENTRAL BUREAU OF INVESTIGATION (CBI) & NARCOTICS CONTROL BUREAU
+LEGAL SUMMONS & DIGITAL ARREST NOTICE #CBI-ND-99201 [DEMO SIMULATION]
+
+Subject: Interception of International Contraband Parcel with your Aadhaar ID
+
+You are hereby placed under immediate DIGITAL HOUSE ARREST. A courier parcel sent from Mumbai to Taipei was intercepted containing 16 forged passports and contraband narcotics linked to your bank account.
+
+The Supreme Court has authorized asset freezing under PMLA Section 4. You must join mandatory Skype surveillance within 15 minutes: skype://cbi-surveillance-court-09. Do not disconnect or speak to family members or local police will execute physical raid. Settle refundable verification bond to RBI account immediately.`,
+  },
 ];
 
 export const MessageScanner: React.FC<MessageScannerProps> = ({

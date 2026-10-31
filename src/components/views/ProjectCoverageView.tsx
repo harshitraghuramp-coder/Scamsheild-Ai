@@ -17,17 +17,53 @@ import {
   Server,
   Lock,
   Radio,
-  ArrowRight
+  ArrowRight,
+  Smartphone
 } from 'lucide-react';
 
 interface ProjectCoverageViewProps {
-  onNavigateToScanner?: (subTab: 'message' | 'url' | 'screenshot' | 'phone') => void;
+  onNavigateToScanner?: (subTab: 'message' | 'url' | 'screenshot' | 'phone' | 'app') => void;
 }
 
 export const ProjectCoverageView: React.FC<ProjectCoverageViewProps> = ({ onNavigateToScanner }) => {
-  const [activeFilter, setActiveFilter] = useState<'all' | 'phone' | 'message' | 'url' | 'screenshot'>('all');
+  const [activeFilter, setActiveFilter] = useState<'all' | 'app' | 'phone' | 'message' | 'url' | 'screenshot'>('all');
 
   const coverageMatrix = [
+    {
+      id: 'app',
+      channel: 'Mobile App Store Authenticity & Risk Forensics',
+      icon: Smartphone,
+      color: 'text-emerald-400',
+      borderColor: 'border-emerald-500/40',
+      badgeColor: 'bg-emerald-950 text-emerald-300 border-emerald-800',
+      threats: [
+        'Impersonation of popular banks, crypto wallets, and messaging platforms',
+        'Deceptive typosquatting package names (e.g., com.whvtsapp, paypa1)',
+        'Off-brand developer credentials utilizing free webmail (Gmail/Yandex)',
+        'Trojan droppers & SpyLoan predatory blackmail applications',
+        'Accessibility service hijacking (Anatsa/SharkBot/TeaBot overlays)',
+        'Unlisted, banned, or malicious sideloaded APK traps',
+      ],
+      heuristics: [
+        'Official Apple iTunes Lookup & Google Play store metadata inspection',
+        'Trademark brand collision & Damerau-Levenshtein edit-distance checks',
+        'Sensitive permissions analyzer (SMS read/receive, Accessibility, System Alert Overlay)',
+        'Developer corporate domain authentication & webmail anomaly triggers',
+        'Review bot consensus and anomalous rating vs download scale metrics',
+      ],
+      aiForensics: [
+        'Gemini 3.8 Flash mobile malware & impersonation intent deduction',
+        'Cross-referencing verified store facts with unverified company claims',
+        'Contextual permission overreach risk assessment based on app category',
+        'Prioritized, actionable installation warnings & remediation steps',
+      ],
+      remediation: [
+        'Immediate installation block & quarantine advisory',
+        'Accessibility service & Device Administrator revocation guidance',
+        'Official developer download portal verification links',
+        'Store fraud reporting procedures for trademark infringement',
+      ],
+    },
     {
       id: 'phone',
       channel: 'Phone Calls & Voice Vishing',
@@ -199,7 +235,7 @@ export const ProjectCoverageView: React.FC<ProjectCoverageViewProps> = ({ onNavi
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
             <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800 text-center">
-              <span className="text-xl font-mono font-bold text-cyan-400">4</span>
+              <span className="text-xl font-mono font-bold text-cyan-400">5</span>
               <p className="text-[10px] uppercase font-mono text-slate-400 mt-0.5">Attack Vectors</p>
             </div>
             <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800 text-center">
@@ -228,11 +264,21 @@ export const ProjectCoverageView: React.FC<ProjectCoverageViewProps> = ({ onNavi
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="p-5 rounded-2xl bg-[#0B132B]/70 border border-emerald-500/30 space-y-2">
+            <div className="flex items-center gap-2 text-emerald-400 font-bold text-sm font-mono">
+              <Smartphone className="w-4 h-4" />
+              <span>AI App Authenticity & Risk Analyzer</span>
+              <span className="ml-auto text-[10px] bg-emerald-950 border border-emerald-500/40 text-emerald-300 px-2 py-0.5 rounded">NEW</span>
+            </div>
+            <p className="text-xs text-slate-300 leading-relaxed">
+              Investigates mobile apps on Google Play Store & Apple App Store before installation. Correlates developer identity, parent company, corporate domains, and flags trojan permissions (Accessibility hijacking, SMS interception, and screen overlays).
+            </p>
+          </div>
+
           <div className="p-5 rounded-2xl bg-[#0B132B]/70 border border-cyan-500/30 space-y-2">
             <div className="flex items-center gap-2 text-cyan-400 font-bold text-sm font-mono">
               <PhoneCall className="w-4 h-4" />
               <span>AI-Powered Phone Call Scam Detection</span>
-              <span className="ml-auto text-[10px] bg-cyan-950 border border-cyan-500/40 text-cyan-300 px-2 py-0.5 rounded">NEW</span>
             </div>
             <p className="text-xs text-slate-300 leading-relaxed">
               Analyzes incoming phone call dialogues, voice messages, and vishing transcripts. Flags digital arrest coercion, fake law enforcement narcotics seizures, bank OTP solicitations, tech support screen capture traps, and voice-cloned kidnapping scams.
@@ -382,7 +428,7 @@ export const ProjectCoverageView: React.FC<ProjectCoverageViewProps> = ({ onNavi
               </h2>
             </div>
             <p className="text-xs text-slate-400">
-              Detailed threat vectors, heuristic detection layers, AI forensics, and containment protocols across all 4 channels.
+              Detailed threat vectors, heuristic detection layers, AI forensics, and containment protocols across all 5 channels.
             </p>
           </div>
 
@@ -396,7 +442,17 @@ export const ProjectCoverageView: React.FC<ProjectCoverageViewProps> = ({ onNavi
                   : 'text-slate-400 hover:text-white'
               }`}
             >
-              All Channels (4)
+              All Channels (5)
+            </button>
+            <button
+              onClick={() => setActiveFilter('app')}
+              className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition ${
+                activeFilter === 'app'
+                  ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Mobile Apps
             </button>
             <button
               onClick={() => setActiveFilter('phone')}

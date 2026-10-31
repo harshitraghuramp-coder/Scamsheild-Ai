@@ -1,4 +1,4 @@
-import { AnalysisResult } from '../types.js';
+import { AnalysisResult } from '../types.ts';
 
 export interface MessageAnalysisInput {
   content: string;
@@ -22,10 +22,16 @@ export interface PhoneCallAnalysisInput {
   callerIdOrNumber?: string;
 }
 
+export interface AppAnalysisInput {
+  appMetadata: any;
+  deterministicData?: any;
+}
+
 export interface IAIAnalyzerProvider {
   name: string;
   analyzeMessage(input: MessageAnalysisInput): Promise<Partial<AnalysisResult>>;
   analyzeUrl(input: UrlAnalysisInput): Promise<Partial<AnalysisResult>>;
   analyzeMultimodal(input: MultimodalAnalysisInput): Promise<Partial<AnalysisResult>>;
   analyzePhoneCall(input: PhoneCallAnalysisInput): Promise<Partial<AnalysisResult>>;
+  analyzeApp(input: AppAnalysisInput): Promise<Partial<AnalysisResult>>;
 }
