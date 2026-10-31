@@ -81,15 +81,15 @@ export const ThreatIntelView: React.FC = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="p-4 rounded-2xl bg-[#0B132B]/80 border border-slate-800">
           <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
-            <span>Active Signatures</span>
+            <span>Verified Indicators</span>
             <Database className="w-4 h-4 text-cyan-400" />
           </div>
           <div className="text-2xl font-bold font-mono text-cyan-300">
-            {status ? status.totalActiveSignatures.toLocaleString() : '148,920'}
+            {status ? status.totalActiveSignatures.toLocaleString() : 'Loading...'}
           </div>
           <div className="text-[11px] text-emerald-400 mt-1 flex items-center gap-1">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-            Simulated Live Stream Sync
+            Active Verified Corpus
           </div>
         </div>
 

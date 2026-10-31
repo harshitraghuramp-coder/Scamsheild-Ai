@@ -4,24 +4,90 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <script>
-      // Suppress benign Vite HMR WebSocket disconnection errors when HMR is intentionally disabled
-      window.addEventListener('error', function (event) {
-        if (
-          event &&
-          ((event.message && (event.message.includes('WebSocket') || event.message.includes('ws://') || event.message.includes('wss://'))) ||
-           (event.filename && event.filename.includes('@vite/client')))
-        ) {
-          event.stopImmediatePropagation();
-          event.preventDefault();
-          return true;
+      (function() {
+        // 1. Intercept Vite HMR WebSockets when HMR is disabled in preview environments
+        var NativeWebSocket = window.WebSocket;
+        if (NativeWebSocket) {
+          function MockViteWebSocket(url, protocols) {
+            var isVite = (
+              protocols === 'vite-hmr' ||
+              protocols === 'vite-ping' ||
+              (typeof url === 'string' && (url.indexOf('token=') !== -1 || url.indexOf('vite') !== -1))
+            );
+            if (isVite) {
+              var target = new EventTarget();
+              target.binaryType = 'blob';
+              target.readyState = 1; // WebSocket.OPEN
+              target.bufferedAmount = 0;
+              target.extensions = '';
+              target.protocol = typeof protocols === 'string' ? protocols : 'vite-hmr';
+              target.url = String(url);
+              target.send = function() {};
+              target.close = function() {
+                target.readyState = 3; // WebSocket.CLOSED
+              };
+              setTimeout(function() {
+                target.dispatchEvent(new Event('open'));
+              }, 0);
+              return target;
+            }
+            return new NativeWebSocket(url, protocols);
+          }
+          MockViteWebSocket.CONNECTING = 0;
+          MockViteWebSocket.OPEN = 1;
+          MockViteWebSocket.CLOSING = 2;
+          MockViteWebSocket.CLOSED = 3;
+          MockViteWebSocket.prototype = NativeWebSocket.prototype;
+          window.WebSocket = MockViteWebSocket;
         }
-      }, true);
-      window.addEventListener('unhandledrejection', function (event) {
-        if (event && event.reason && String(event.reason).includes('WebSocket')) {
-          event.stopImmediatePropagation();
-          event.preventDefault();
-        }
-      }, true);
+
+        // 2. Suppress benign Vite HMR console errors
+        var origConsoleError = console.error;
+        console.error = function() {
+          var args = Array.prototype.slice.call(arguments);
+          var isViteHmrError = args.some(function(arg) {
+            if (!arg) return false;
+            var str = typeof arg === 'string' ? arg : (arg.message || arg.stack || String(arg));
+            return (
+              str.indexOf('WebSocket closed without opened') !== -1 ||
+              str.indexOf('failed to connect to websocket') !== -1 ||
+              (str.indexOf('[vite]') !== -1 && (str.indexOf('WebSocket') !== -1 || str.indexOf('ws://') !== -1 || str.indexOf('wss://')))
+            );
+          });
+          if (isViteHmrError) return;
+          origConsoleError.apply(console, args);
+        };
+
+        // 3. Suppress benign window error and rejection events
+        window.addEventListener('error', function(event) {
+          var msg = (event && (event.message || (event.error && (event.error.message || event.error.stack)))) || '';
+          var file = (event && event.filename) || '';
+          if (
+            msg.indexOf('WebSocket') !== -1 ||
+            msg.indexOf('[vite]') !== -1 ||
+            msg.indexOf('ws://') !== -1 ||
+            msg.indexOf('wss://') !== -1 ||
+            file.indexOf('@vite/client') !== -1
+          ) {
+            event.stopImmediatePropagation();
+            event.preventDefault();
+            return true;
+          }
+        }, true);
+
+        window.addEventListener('unhandledrejection', function(event) {
+          var reason = (event && (event.reason ? (event.reason.message || event.reason.stack || String(event.reason)) : '')) || '';
+          if (
+            reason.indexOf('WebSocket') !== -1 ||
+            reason.indexOf('[vite]') !== -1 ||
+            reason.indexOf('ws://') !== -1 ||
+            reason.indexOf('wss://') !== -1
+          ) {
+            event.stopImmediatePropagation();
+            event.preventDefault();
+          }
+        }, true);
+      })();
     </script>
     <title>ScamShield AI</title>
     <meta name="description" content="AI-powered cybersecurity scanner and fraud prevention platform: Think Before You Click." />

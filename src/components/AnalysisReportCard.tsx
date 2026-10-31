@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { AnalysisResult } from '../types';
 import { RiskGauge } from './RiskGauge';
 import { AppAuthenticityReport } from './AppAuthenticityReport';
+import { ExplainableEvidenceReportView } from './ExplainableEvidenceReportView';
 import {
   AlertOctagon,
   Brain,
@@ -231,6 +232,14 @@ ${result.disclaimer}`;
           {result.summary}
         </p>
       </div>
+
+      {/* Differentiator: Explainable Scam Evidence Report */}
+      {result.explainableReport && (
+        <ExplainableEvidenceReportView
+          report={result.explainableReport}
+          targetType={result.targetType}
+        />
+      )}
 
       {/* Red Flags Section */}
       <div className="space-y-3">

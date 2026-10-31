@@ -100,6 +100,24 @@ export const UrlScanner: React.FC<UrlScannerProps> = ({
 
   return (
     <div className="space-y-6">
+      {/* Reputation Integration & Sandboxing Notice */}
+      <div className="p-3.5 rounded-2xl bg-cyan-950/20 border border-cyan-500/30 text-xs text-slate-300 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+        <div className="flex items-center gap-2">
+          <ShieldAlert className="w-4 h-4 text-cyan-400 shrink-0" />
+          <span>
+            <strong>Zero-Execution Sandbox:</strong> ScamShield AI inspects syntax & signatures server-side. URLs are never automatically opened or pinged from your browser.
+          </span>
+        </div>
+        <div className="flex items-center gap-2 text-[10px] font-mono shrink-0">
+          <span className="px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800">
+            Threat DB: Active
+          </span>
+          <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700" title="External Safe Browsing API key not set in environment; engine uses deterministic heuristics and verified threat signatures">
+            External API: Fallback Engine
+          </span>
+        </div>
+      </div>
+
       {/* Input Field Card */}
       <div className="space-y-3">
         <label className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">

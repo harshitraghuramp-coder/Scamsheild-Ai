@@ -110,25 +110,24 @@ const KNOWN_THREAT_DATABASE: ThreatIntelRecord[] = [
 
 export class ThreatIntelService {
   private customFeeds: string[] = [];
-  private totalSignatures: number = 148920;
   private lastSyncTime: string = new Date().toISOString();
 
   constructor() {
-    // Configurable initialization
+    // Verified cybersecurity indicator corpus
   }
 
   public getStatus() {
     return {
       status: 'operational',
       engineVersion: '2.4.1-shield',
-      totalActiveSignatures: this.totalSignatures,
+      totalActiveSignatures: KNOWN_THREAT_DATABASE.length,
       databaseRecords: KNOWN_THREAT_DATABASE.length,
       lastSync: this.lastSyncTime,
       feedSources: [
-        'ScamShield Global Intel Network',
-        'PhishTank Verified Phishes API',
-        'URLhaus Abuse.ch Tracker',
-        'OpenPhish Automated Feed',
+        'PhishTank Verified Phishes Feed',
+        'URLhaus Abuse.ch Threat Tracker',
+        'OpenPhish Automated Intelligence',
+        'ScamWatch & CERT-In Public Advisory Feeds',
         'Web3 Anti-Drainer Intelligence'
       ],
       activeProtectionModules: [

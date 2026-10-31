@@ -138,6 +138,32 @@ export interface AppAuthenticityResult extends AnalysisResult {
   unverifiedInformation: string[];
 }
 
+export interface ExplainableEvidenceItem {
+  category: 'OBSERVABLE_FACT' | 'MODEL_INFERENCE' | 'INTELLIGENCE_MATCH';
+  indicator: string;
+  finding: string;
+  confidenceReasoning: string;
+  sourceOrRule: string;
+  severity: 'low' | 'medium' | 'high' | 'critical';
+}
+
+export interface UncertaintyNote {
+  aspect: string;
+  explanation: string;
+  howToVerifyIndependently: string;
+}
+
+export interface ExplainableEvidenceReport {
+  overallRiskClassification: RiskLevel;
+  calibrationRationale: string;
+  observableFacts: ExplainableEvidenceItem[];
+  modelInferences: ExplainableEvidenceItem[];
+  threatIntelMatches: ExplainableEvidenceItem[];
+  uncertaintiesAndGaps: UncertaintyNote[];
+  containmentPlaybook: RecommendedAction[];
+  externalReferences: string[];
+}
+
 export interface AnalysisResult {
   id: string;
   timestamp: string;
@@ -158,6 +184,7 @@ export interface AnalysisResult {
   timing?: ScanTimings;
   callerIdOrNumber?: string;
   appDetails?: AppAuthenticityResult;
+  explainableReport?: ExplainableEvidenceReport;
 }
 
 export interface ScanHistoryItem extends AnalysisResult {

@@ -135,6 +135,30 @@ const KNOWN_SCAM_PATTERNS: ScamPattern[] = [
     tactics: ['Emotional Manipulation', 'Urgency'],
     redFlagTitle: 'Family Emergency Impersonation Trap',
     redFlagDescription: 'Scammers pretend to be a family member who dropped their phone and urgently needs money to pay an emergency bill before you can verify.'
+  },
+
+  // Police / Digital Arrest / Law Enforcement Coercion
+  {
+    id: 'POLICE_LEGAL_EXTORTION',
+    name: 'Police / Law Enforcement / Digital Arrest Threat',
+    category: 'Police & Legal Threat Impersonation',
+    regex: /(police\s+(officer|inspector|station|warrant)|arrest\s+warrant|digital\s+arrest|cbi\s+|customs\s+(parcel|narcotics|seizure)|stay\s+on\s+(skype|video|call)|rbi\s+(escrow|safe\s+account|verification\s+account))/i,
+    weight: 55,
+    tactics: ['Intimidation', 'Authority Impersonation', 'Coercion', 'Urgency'],
+    redFlagTitle: 'Law Enforcement / Digital Arrest Threat',
+    redFlagDescription: 'Police, CBI, and courts NEVER issue arrest warrants over WhatsApp, NEVER demand Skype video interrogation, and NEVER require transfers to "safe verification accounts".'
+  },
+
+  // Electricity / Utility Bill Disconnection
+  {
+    id: 'ELECTRICITY_DISCONNECTION_THREAT',
+    name: 'Utility / Electricity Disconnection Bait',
+    category: 'SMS & WhatsApp Fraud',
+    regex: /(electricity|power)\s+(will\s+be\s+)?(disconnected|cut\s*off)\s+(tonight|at\s+\d{1,2}[:.]\d{2}|within\s+\d+\s*hours).*?(unpaid\s+bill|call|contact|officer|\+?91[\d\s-]{10})/i,
+    weight: 50,
+    tactics: ['Urgency', 'Fear', 'Impulsive Action'],
+    redFlagTitle: 'Urgent Electricity Disconnection Threat',
+    redFlagDescription: 'Scammers blast fake power disconnection alerts instructing victims to call mobile numbers or download remote APKs to steal money.'
   }
 ];
 

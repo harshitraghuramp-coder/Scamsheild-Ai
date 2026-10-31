@@ -23,68 +23,89 @@ interface CheckItem {
   priority: 'high' | 'medium' | 'critical';
 }
 
+const DEFAULT_ITEMS: CheckItem[] = [
+  {
+    id: 'c1',
+    category: 'Emergency Readiness',
+    title: 'Save Official 1930 Helpline to Phone Contacts',
+    desc: 'Save "National Cybercrime Helpline - 1930" on your mobile so you can dial it instantly within the 2-hour golden period if funds are transferred.',
+    impactScore: 20,
+    completed: true,
+    priority: 'critical'
+  },
+  {
+    id: 'c2',
+    category: 'Authentication',
+    title: 'Hardware / App-based 2FA on Primary Email',
+    desc: 'Avoid SMS-only 2FA which is vulnerable to SIM swap attacks; use Google Authenticator, YubiKey, or built-in passkeys.',
+    impactScore: 20,
+    completed: true,
+    priority: 'critical'
+  },
+  {
+    id: 'c3',
+    category: 'Mobile Security',
+    title: 'Audit Accessibility & SMS Permissions',
+    desc: 'Ensure no untrusted utility, battery saver, or cleaner apps have Android Accessibility or Notification Listener permissions.',
+    impactScore: 15,
+    completed: false,
+    priority: 'high'
+  },
+  {
+    id: 'c4',
+    category: 'Financial Defense',
+    title: 'Configure Daily UPI & Netbanking Limits',
+    desc: 'Limit single-day UPI transfers on PhonePe/GPay/Paytm to prevent catastrophic loss if coerced by digital arrest imposters.',
+    impactScore: 15,
+    completed: true,
+    priority: 'high'
+  },
+  {
+    id: 'c5',
+    category: 'Telecom Security',
+    title: 'SIM Card PIN & Carrier Porting Lock',
+    desc: 'Set a 4-digit SIM PIN to prevent criminals from moving your phone number into another handset to intercept SMS OTPs.',
+    impactScore: 15,
+    completed: false,
+    priority: 'medium'
+  },
+  {
+    id: 'c6',
+    category: 'Family Protocol',
+    title: 'Establish a Family Safe Word for Emergency Calls',
+    desc: 'Agree on a secret verbal code with parents and children to immediately defeat AI voice cloning kidnapper scams.',
+    impactScore: 15,
+    completed: false,
+    priority: 'high'
+  }
+];
+
 export const SecurityCheckupView: React.FC = () => {
-  const [items, setItems] = useState<CheckItem[]>([
-    {
-      id: 'c1',
-      category: 'Emergency Readiness',
-      title: 'Save Official 1930 Helpline to Phone Contacts',
-      desc: 'Save "National Cybercrime Helpline - 1930" on your mobile so you can dial it instantly within the 2-hour golden period if funds are transferred.',
-      impactScore: 20,
-      completed: true,
-      priority: 'critical'
-    },
-    {
-      id: 'c2',
-      category: 'Authentication',
-      title: 'Hardware / App-based 2FA on Primary Email',
-      desc: 'Avoid SMS-only 2FA which is vulnerable to SIM swap attacks; use Google Authenticator, YubiKey, or built-in passkeys.',
-      impactScore: 20,
-      completed: true,
-      priority: 'critical'
-    },
-    {
-      id: 'c3',
-      category: 'Mobile Security',
-      title: 'Audit Accessibility & SMS Permissions',
-      desc: 'Ensure no untrusted utility, battery saver, or cleaner apps have Android Accessibility or Notification Listener permissions.',
-      impactScore: 15,
-      completed: false,
-      priority: 'high'
-    },
-    {
-      id: 'c4',
-      category: 'Financial Defense',
-      title: 'Configure Daily UPI & Netbanking Limits',
-      desc: 'Limit single-day UPI transfers on PhonePe/GPay/Paytm to prevent catastrophic loss if coerced by digital arrest imposters.',
-      impactScore: 15,
-      completed: true,
-      priority: 'high'
-    },
-    {
-      id: 'c5',
-      category: 'Telecom Security',
-      title: 'SIM Card PIN & Carrier Porting Lock',
-      desc: 'Set a 4-digit SIM PIN to prevent criminals from moving your phone number into another handset to intercept SMS OTPs.',
-      impactScore: 15,
-      completed: false,
-      priority: 'medium'
-    },
-    {
-      id: 'c6',
-      category: 'Family Protocol',
-      title: 'Establish a Family Safe Word for Emergency Calls',
-      desc: 'Agree on a secret verbal code with parents and children to immediately defeat AI voice cloning kidnapper scams.',
-      impactScore: 15,
-      completed: false,
-      priority: 'high'
+  const [items, setItems] = useState<CheckItem[]>(() => {
+    try {
+      const saved = localStorage.getItem('scamshield_checkup_items');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length === DEFAULT_ITEMS.length) {
+          return parsed;
+        }
+      }
+    } catch {
+      // Fallback
     }
-  ]);
+    return DEFAULT_ITEMS;
+  });
 
   const toggleItem = (id: string) => {
-    setItems(prev =>
-      prev.map(item => (item.id === id ? { ...item, completed: !item.completed } : item))
-    );
+    setItems(prev => {
+      const updated = prev.map(item => (item.id === id ? { ...item, completed: !item.completed } : item));
+      try {
+        localStorage.setItem('scamshield_checkup_items', JSON.stringify(updated));
+      } catch {
+        // LocalStorage unavailable
+      }
+      return updated;
+    });
   };
 
   const totalScore = items.reduce((acc, curr) => acc + (curr.completed ? curr.impactScore : 0), 0);

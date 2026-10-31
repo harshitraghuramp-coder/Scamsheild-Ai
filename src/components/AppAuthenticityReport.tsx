@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { AppAuthenticityResult } from '../types';
 import { RiskGauge } from './RiskGauge';
+import { ExplainableEvidenceReportView } from './ExplainableEvidenceReportView';
 import {
   Smartphone,
   ShieldAlert,
@@ -699,6 +700,14 @@ ${result.disclaimer}`;
           </div>
         </div>
       </div>
+
+      {/* Differentiator: Explainable Scam Evidence Report */}
+      {result.explainableReport && (
+        <ExplainableEvidenceReportView
+          report={result.explainableReport}
+          targetType="app"
+        />
+      )}
 
       {/* SECTION 8: SAFETY RECOMMENDATIONS */}
       <div className="p-6 rounded-3xl bg-[#0B132B]/70 border border-slate-800 space-y-4">

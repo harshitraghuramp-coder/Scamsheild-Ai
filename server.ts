@@ -32,6 +32,7 @@ import { scanCache } from './server/cache/scan-cache.ts';
 import { aiCircuitBreaker } from './server/ai/circuit-breaker.ts';
 import cookieParser from 'cookie-parser';
 import authRouter from './server/auth/routes.ts';
+import { buildExplainableEvidenceReport } from './server/heuristics/explainable-report.ts';
 
 dotenv.config();
 
@@ -174,6 +175,21 @@ app.post('/api/analyze/message', async (req: Request, res: Response): Promise<vo
         circuit_state: aiCircuitBreaker.getState(),
       };
 
+      const explainableReport = buildExplainableEvidenceReport({
+        targetType: 'message',
+        scamType: finalScamType,
+        riskScore: finalRiskScore,
+        riskLevel: finalRiskLevel,
+        confidence,
+        redFlags: finalRedFlags,
+        technicalIndicators: deterministic.technicalIndicators,
+        psychologicalTactics: finalTactics,
+        recommendedActions: finalActions,
+        extractedEntities: deterministic.extractedEntities,
+        sourceAnalysisMode: mode,
+        threatHit: null,
+      });
+
       const responsePayload: AnalysisResult = {
         id: generateScanId(),
         timestamp: new Date().toISOString(),
@@ -191,6 +207,7 @@ app.post('/api/analyze/message', async (req: Request, res: Response): Promise<vo
         sourceAnalysisMode: mode,
         disclaimer: DISCLAIMER_TEXT,
         timing,
+        explainableReport,
       };
 
       return responsePayload;
@@ -290,6 +307,26 @@ app.post('/api/analyze/url', async (req: Request, res: Response): Promise<void> 
       }
     }
 
+    const explainableReport = buildExplainableEvidenceReport({
+      targetType: 'url',
+      scamType: finalScamType,
+      riskScore: finalRiskScore,
+      riskLevel: finalRiskLevel,
+      confidence,
+      redFlags: finalRedFlags,
+      technicalIndicators: deterministic.technicalIndicators,
+      psychologicalTactics: finalTactics,
+      recommendedActions: finalActions,
+      extractedEntities: {
+        urls: [url],
+        emails: [],
+        phones: [],
+        paymentMethods: [],
+      },
+      sourceAnalysisMode: mode,
+      threatHit: deterministic.threatIntelHit,
+    });
+
     const responsePayload: AnalysisResult = {
       id: generateScanId(),
       timestamp: new Date().toISOString(),
@@ -311,6 +348,7 @@ app.post('/api/analyze/url', async (req: Request, res: Response): Promise<void> 
       recommendedActions: finalActions,
       sourceAnalysisMode: mode,
       disclaimer: DISCLAIMER_TEXT,
+      explainableReport,
     };
 
     res.json(responsePayload);
@@ -366,6 +404,21 @@ app.post('/api/analyze/screenshot', async (req: Request, res: Response): Promise
       finalRiskLevel = deterministic.riskLevel;
     }
 
+    const explainableReport = buildExplainableEvidenceReport({
+      targetType: 'screenshot',
+      scamType: finalScamType,
+      riskScore: finalRiskScore,
+      riskLevel: finalRiskLevel,
+      confidence: aiResult?.confidence || deterministic.confidence,
+      redFlags: finalRedFlags,
+      technicalIndicators: deterministic.technicalIndicators,
+      psychologicalTactics: finalTactics,
+      recommendedActions: finalActions,
+      extractedEntities: deterministic.extractedEntities,
+      sourceAnalysisMode: mode,
+      threatHit: null,
+    });
+
     const responsePayload: AnalysisResult = {
       id: generateScanId(),
       timestamp: new Date().toISOString(),
@@ -382,6 +435,7 @@ app.post('/api/analyze/screenshot', async (req: Request, res: Response): Promise
       recommendedActions: finalActions,
       sourceAnalysisMode: mode,
       disclaimer: DISCLAIMER_TEXT,
+      explainableReport,
     };
 
     res.json(responsePayload);
@@ -506,6 +560,22 @@ app.post('/api/analyze/phone-call', async (req: Request, res: Response): Promise
         circuit_state: aiCircuitBreaker.getState(),
       };
 
+      const explainableReport = buildExplainableEvidenceReport({
+        targetType: 'phone_call',
+        scamType: finalScamType,
+        riskScore: finalRiskScore,
+        riskLevel: finalRiskLevel,
+        confidence,
+        redFlags: finalRedFlags,
+        technicalIndicators: deterministic.technicalIndicators,
+        psychologicalTactics: finalTactics,
+        recommendedActions: finalActions,
+        extractedEntities: deterministic.extractedEntities,
+        sourceAnalysisMode: mode,
+        callerIdOrNumber: callerIdOrNumber?.trim(),
+        threatHit: null,
+      });
+
       const finalResult: AnalysisResult = {
         id: generateScanId(),
         timestamp: new Date().toISOString(),
@@ -524,6 +594,7 @@ app.post('/api/analyze/phone-call', async (req: Request, res: Response): Promise
         disclaimer: DISCLAIMER_TEXT,
         timing,
         callerIdOrNumber: callerIdOrNumber?.trim() || undefined,
+        explainableReport,
       };
 
       // Store in safe cache
@@ -676,6 +747,21 @@ app.post('/api/analyze/app', async (req: Request, res: Response): Promise<void> 
         circuit_state: aiCircuitBreaker.getState(),
       };
 
+      const explainableReport = buildExplainableEvidenceReport({
+        targetType: 'app',
+        scamType: finalScamType,
+        riskScore: finalRiskScore,
+        riskLevel: finalRiskLevel,
+        confidence,
+        redFlags: finalRedFlags,
+        technicalIndicators: deterministic.technicalIndicators,
+        psychologicalTactics: finalTactics,
+        recommendedActions: finalActions,
+        sourceAnalysisMode: mode,
+        appDetails: deterministic,
+        threatHit: null,
+      });
+
       const finalAppResult: AppAuthenticityResult = {
         ...deterministic,
         id: generateScanId(),
@@ -693,6 +779,7 @@ app.post('/api/analyze/app', async (req: Request, res: Response): Promise<void> 
         sourceAnalysisMode: mode,
         disclaimer: DISCLAIMER_TEXT,
         timing,
+        explainableReport,
       };
 
       // Store in bounded cache
