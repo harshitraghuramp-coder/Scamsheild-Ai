@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <linearGradient id="shieldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00E5FF" />
+      <stop offset="50%" stop-color="#0070F3" />
+      <stop offset="100%" stop-color="#6366F1" />
+    </linearGradient>
+    <linearGradient id="glowGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#00F5FF" stop-opacity="0.8" />
+      <stop offset="100%" stop-color="#0070F3" stop-opacity="0.1" />
+    </linearGradient>
+    <filter id="cyberGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="16" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+  
+  <!-- Background hex grid pattern -->
+  <rect width="512" height="512" rx="112" fill="#070B14" />
+  <circle cx="256" cy="256" r="230" stroke="url(#shieldGrad)" stroke-width="2" stroke-opacity="0.25" stroke-dasharray="8 8" />
+
+  <!-- Shield Outer -->
+  <path d="M256 64L392 120V248C392 344 256 424 256 424C256 424 120 344 120 248V120L256 64Z" 
+        fill="#0B132B" stroke="url(#shieldGrad)" stroke-width="12" stroke-linejoin="round" />
+        
+  <!-- Glowing Core -->
+  <path d="M256 96L368 142V248C368 326 256 392 256 392C256 392 144 326 144 248V142L256 96Z" 
+        fill="url(#glowGrad)" fill-opacity="0.15" stroke="#00E5FF" stroke-width="3" stroke-opacity="0.4" />
+
+  <!-- Cyber Node & Circuit lines -->
+  <path d="M256 160V220M256 260V320M200 240H312M190 190L225 225M322 190L287 225M190 290L225 255M322 290L287 255" 
+        stroke="#00E5FF" stroke-width="4" stroke-linecap="round" stroke-opacity="0.8" />
+        
+  <!-- Radar Eye Center -->
+  <circle cx="256" cy="240" r="28" fill="#070B14" stroke="#00E5FF" stroke-width="6" />
+  <circle cx="256" cy="240" r="10" fill="#00E5FF" />
+  <circle cx="256" cy="240" r="4" fill="#FFFFFF" />
+  
+  <!-- Threat Radar Sweep Tick -->
+  <path d="M256 195L256 180" stroke="#00F5FF" stroke-width="4" stroke-linecap="round" />
+  <path d="M301 240L316 240" stroke="#00F5FF" stroke-width="4" stroke-linecap="round" />
+  <path d="M256 285L256 300" stroke="#00F5FF" stroke-width="4" stroke-linecap="round" />
+  <path d="M211 240L196 240" stroke="#00F5FF" stroke-width="4" stroke-linecap="round" />
+</svg>

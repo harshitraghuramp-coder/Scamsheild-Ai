@@ -1,0 +1,6 @@
+{
+  "name": "ScamShield AI",
+  "description": "AI-powered cybersecurity scanner and fraud prevention platform: Think Before You Click.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
